@@ -1,0 +1,61 @@
+---
+
+- name: Setup Server with NVM, Node.js 22, and PM2
+  hosts: remote_servers
+  become: yes
+  become_user: root
+
+  vars:
+    nvm_version: "v0.40.1"
+    node_version: "22"
+    nvm_dir: "/root/.nvm"
+
+  tasks:
+    # Step 1: Download & Install NVM
+    - name: Download NVM installation script
+      get_url:
+        url: "https://raw.githubusercontent.com/nvm-sh/nvm/{{ nvm_version }}/install.sh"
+        dest: /tmp/nvm_install.sh
+        mode: '0755'
+
+    - name: Run NVM installation script
+      shell: bash /tmp/nvm_install.sh
+      args:
+        creates: "{{ nvm_dir }}/nvm.sh"
+
+    - name: Clean up NVM installation script
+      file:
+        path: /tmp/nvm_install.sh
+        state: absent
+
+    # Step 2: Install Node.js 22 via NVM
+    - name: Install Node.js {{ node_version }} via NVM
+      shell: |
+        source {{ nvm_dir }}/nvm.sh
+        nvm install {{ node_version }}
+        nvm alias default {{ node_version }}
+        nvm use default
+      args:
+        executable: /bin/bash
+
+    # Step 3: Install PM2 globally
+    - name: Install PM2 globally via npm
+      shell: |
+        source {{ nvm_dir }}/nvm.sh
+        npm install -g pm2
+      args:
+        executable: /bin/bash
+
+    - name: Verify installations
+      shell: |
+        source {{ nvm_dir }}/nvm.sh
+        echo "Node version: $(node --version)"
+        echo "NPM version: $(npm --version)"
+        echo "PM2 version: $(pm2 --version)"
+      args:
+        executable: /bin/bash
+      register: versions
+
+    - name: Display installed versions
+      debug:
+        msg: "{{ versions.stdout_lines }}"

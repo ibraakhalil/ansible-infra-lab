@@ -1,0 +1,19 @@
+---
+
+- name: Create Ansible Directory and Test File
+  hosts: remote_servers
+  become: yes
+  become_user: root
+
+  tasks:
+    - name: Create ansible folder under /home directory
+      file:
+        path: /home/ansible
+        state: directory
+        mode: '0755'
+
+    - name: Create test1.txt file with content
+      copy:
+        dest: /home/ansible/test1.txt
+        content: "I am learning ansible"
+        mode: '0644'
