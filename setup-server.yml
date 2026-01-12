@@ -39,10 +39,10 @@
         executable: /bin/bash
 
     # Step 3: Install PM2 globally
-    - name: Install PM2 globally via npm
+    - name: Install PM2 globally via npm (latest version)
       shell: |
         source {{ nvm_dir }}/nvm.sh
-        npm install -g pm2
+        npm install -g pm2@latest
       args:
         executable: /bin/bash
 
