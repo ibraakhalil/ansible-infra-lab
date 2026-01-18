@@ -9,6 +9,9 @@
     nvm_version: "v0.40.1"
     node_version: "22"
     nvm_dir: "/root/.nvm"
+    # CloudPanel settings
+    cloudpanel_db_engine: "MYSQL_8.0"  # Options: MYSQL_8.0, MARIADB_11.4, MARIADB_10.11, MARIADB_10.6
+    cloudpanel_installer_checksum: "19cfa702e7936a79e47812ff57d9859175ea902c62a68b2c15ccd1ebaf36caeb"
 
   tasks:
     # Step 1: Download & Install NVM
@@ -95,6 +98,50 @@
         port: '443'
         proto: tcp
 
+    - name: Allow CloudPanel Admin (port 8443)
+      community.general.ufw:
+        rule: allow
+        port: '8443'
+        proto: tcp
+
     - name: Enable UFW
       community.general.ufw:
         state: enabled
+
+    # Step 5: Install CloudPanel
+    - name: Update apt cache and upgrade packages
+      apt:
+        update_cache: yes
+        upgrade: yes
+
+    - name: Install CloudPanel prerequisites
+      apt:
+        name:
+          - curl
+          - wget
+          - sudo
+        state: present
+
+    - name: Download CloudPanel installer
+      get_url:
+        url: "https://installer.cloudpanel.io/ce/v2/install.sh"
+        dest: /tmp/cloudpanel_install.sh
+        mode: '0755'
+        checksum: "sha256:{{ cloudpanel_installer_checksum }}"
+
+    - name: Run CloudPanel installer
+      shell: "DB_ENGINE={{ cloudpanel_db_engine }} bash /tmp/cloudpanel_install.sh"
+      args:
+        executable: /bin/bash
+      async: 1800  # 30 minutes timeout (installation takes time)
+      poll: 30     # Check every 30 seconds
+      register: cloudpanel_install
+
+    - name: Clean up CloudPanel installer
+      file:
+        path: /tmp/cloudpanel_install.sh
+        state: absent
+
+    - name: Display CloudPanel installation result
+      debug:
+        msg: "CloudPanel installed. Access admin panel at https://YOUR_SERVER_IP:8443"
