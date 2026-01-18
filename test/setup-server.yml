@@ -11,7 +11,6 @@
     nvm_dir: "/root/.nvm"
 
   tasks:
-    # Step 1: Download & Install NVM
     - name: Download NVM installation script
       get_url:
         url: "https://raw.githubusercontent.com/nvm-sh/nvm/{{ nvm_version }}/install.sh"
@@ -38,13 +37,48 @@
       args:
         executable: /bin/bash
 
-    # Step 3: Install PM2 globally
     - name: Install PM2 globally via npm (latest version)
       shell: |
         source {{ nvm_dir }}/nvm.sh
         npm install -g pm2@latest
       args:
         executable: /bin/bash
+
+    # Step 4: Install CloudPanel
+    - name: Update apt cache
+      apt:
+        update_cache: yes
+        cache_valid_time: 3600
+      timeout: 300
+      retries: 3
+      delay: 10
+      register: apt_result
+      until: apt_result is success
+
+    - name: Install CloudPanel prerequisites
+      apt:
+        name:
+          - curl
+          - wget
+        state: present
+
+    - name: Download CloudPanel installation script
+      get_url:
+        url: https://installer.cloudpanel.io/ce/v2/install.sh
+        dest: /tmp/cloudpanel_install.sh
+        mode: '0755'
+
+    - name: Run CloudPanel installation script
+      shell: bash /tmp/cloudpanel_install.sh
+      args:
+        executable: /bin/bash
+      async: 3600
+      poll: 30
+
+    - name: Clean up CloudPanel installation script
+      file:
+        path: /tmp/cloudpanel_install.sh
+        state: absent
 
     - name: Verify installations
       shell: |
@@ -59,3 +93,7 @@
     - name: Display installed versions
       debug:
         msg: "{{ versions.stdout_lines }}"
+
+    - name: Display CloudPanel access info
+      debug:
+        msg: "CloudPanel is accessible at https://{{ inventory_hostname }}:8443"
